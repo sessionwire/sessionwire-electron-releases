@@ -1,0 +1,24 @@
+name: Notify desktop download copy
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Start the S3 copy
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.repository }}" = "sessionwire/sessionwire-electron-releases-staging" ]; then
+            ENV=staging
+          else
+            ENV=production
+          fi
+          jq -nc --arg env "$ENV" --arg tag "$TAG" \
+            '{event_type:"electron-release-published", client_payload:{environment:$env, tag:$tag}}' \
+            | gh api --method POST repos/sessionwire/sessionwire-monorepo/dispatches --input -
